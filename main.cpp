@@ -1,6 +1,9 @@
 #include "CoreCpp/CoreMacros.hpp"
 #include "CoreCpp/CoreStrings.hpp"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 #include <chrono>
 // Naive implementation of the BBP pi estimator up to N terms
 double bbp_naive(uint N)
@@ -84,23 +87,51 @@ static char hex_digits[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a
 int main()
 {
     //bbp_naive(10);
+    static const char *ansi_white = "\033[0;37m";
+    static const char *ansi_bold_green = "\033[1;32m";
 
-    std::vector<uint> tests = {1000, 2000, 3000, 4000,5000, 10000, 50000};
-    for (const auto &N : tests)
+    printf(ansi_white);
+
+    int x, y, n;
+    unsigned char *data = stbi_load("pi.png", &x, &y, &n, 0);
+
+    uint index = 0;
+
+    std::vector<uint> digits(x * y);
+
+    for (int i = 20; i < x - 20; ++i)
     {
-        std::string decimals(N, 'x');
-        auto start = std::chrono::system_clock::now();
-
-        for (uint i = 0; i < N; ++i)
+        for (int j = 0; j < y; ++j)
         {
-            decimals[i] = hex_digits[bbp(i)];
+            if (index == 1)
+            {
+                printf(".");
+            }
+            else
+            {
+                printf("%c", hex_digits[bbp(index ? index - 1 : index)]);
+            }
+            ++index;
+
+            const uint pixel = (i * x + j) * n;
+            if (j < y - 1)
+            {
+                const uint next_pixel = (i * x + j + 1) * n;
+
+                if (data[pixel] == 0 && data[next_pixel] > 0)
+                {
+                    printf(ansi_bold_green);
+                }
+                else if (data[pixel] > 0 && data[next_pixel] == 0)
+                {
+                    printf(ansi_white);
+                }
+            }
+            else
+            {
+                printf(ansi_white);
+            }
         }
-        auto end = std::chrono::system_clock::now();
-
-    auto elapsed =
-        std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-    
-    printf("%d decimals in %lld ms - %f /s\n", N, elapsed.count(), (float)1000*N /(elapsed.count()));
+        printf("\n");
     }
 }
